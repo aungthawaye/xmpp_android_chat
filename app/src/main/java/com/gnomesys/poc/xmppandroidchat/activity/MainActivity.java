@@ -1,7 +1,9 @@
-package com.gnomesys.poc.xmppandroidchat;
+package com.gnomesys.poc.xmppandroidchat.activity;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import com.gnomesys.poc.xmppandroidchat.R;
 
 public class MainActivity extends AppCompatActivity {
 
