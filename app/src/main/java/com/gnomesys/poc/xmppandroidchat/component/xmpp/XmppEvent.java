@@ -6,11 +6,20 @@ package com.gnomesys.poc.xmppandroidchat.component.xmpp;
  * Email    : ata.aungthawaye@gmail.com (aungthawaye@gnomesys.com)
  * Date     : 5/6/16
  */
-public interface XmppMessagingEvent {
+public interface XmppEvent {
+
+    String CONNECTED = "connected";
+    String AUTHENTICATED = "authenticated";
 
     void onLogin();
-    void onConnect();
+
+    void onConnected();
+
     void onDisconnect();
+
     void onIncomingMessage();
+
     void onReceiptMessageReceived();
+
+    void onChatCreated();
 }

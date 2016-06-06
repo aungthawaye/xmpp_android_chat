@@ -1,4 +1,4 @@
-package com.gnomesys.poc.xmppandroidchat.component.xmpp.smack;
+package com.gnomesys.poc.xmppandroidchat.component.xmpp;
 
 import android.os.AsyncTask;
 import android.util.Log;
@@ -7,11 +7,15 @@ import org.jivesoftware.smack.AbstractXMPPConnection;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.chat.Chat;
 import org.jivesoftware.smack.chat.ChatManager;
+import org.jivesoftware.smack.chat.ChatManagerListener;
+import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.jivesoftware.smackx.filetransfer.FileTransferManager;
 
 import java.io.IOException;
 
@@ -21,11 +25,13 @@ import java.io.IOException;
  * Email    : ata.aungthawaye@gmail.com (aungthawaye@gnomesys.com)
  * Date     : 5/6/16
  */
-public final class SmackXmppManager {
+public final class XmppManager {
 
     private AbstractXMPPConnection xmppConnection = null;
-    private ChatManager chatManager = null;
     private ConnectionListener connectionListener = null;
+
+    private ChatManager chatManager = null;
+    private FileTransferManager fileTransferManager = null;
 
     /**
      * To connect to XMPP server using Smack API.
@@ -59,9 +65,9 @@ public final class SmackXmppManager {
     /**
      * To connect to XMPP Server
      *
-     * @param callback : Callback after successful or failed connection.
+     * @param connectionListener : Connection listener
      */
-    public void connect(final ConnectionListener connectionListener, final SuccessOrFailureCallback callback) {
+    public void connect(final ConnectionListener connectionListener) {
 
         if (this.xmppConnection == null) {
             throw new IllegalStateException("Initialization hasn't been done yet.");
@@ -71,37 +77,23 @@ public final class SmackXmppManager {
 
         AsyncTask<Void, Integer, Boolean> asyncTask = new AsyncTask<Void, Integer, Boolean>() {
 
-            private Throwable exception = null;
-
             @Override
             protected Boolean doInBackground(Void... objects) {
 
                 try {
 
+                    XmppManager.this.xmppConnection
+                            .addConnectionListener(XmppManager.this.connectionListener);
+
                     Log.d("XMPP", "Connecting to XMPP Server...");
-                    SmackXmppManager.this.xmppConnection.connect();
+                    XmppManager.this.xmppConnection.connect();
                     Log.d("XMPP", "Connected to XMPP Server...");
 
-                    SmackXmppManager.this.xmppConnection
-                            .addConnectionListener(SmackXmppManager.this.connectionListener);
                 } catch (XMPPException | IOException | SmackException e) {
                     Log.e("XMPP", Log.getStackTraceString(e));
-                    this.exception = e;
                     return false;
                 }
                 return true;
-            }
-
-            @Override
-            protected void onPostExecute(Boolean success) {
-                if (callback != null) {
-                    if (success) {
-
-                        callback.onSuccess();
-                    } else {
-                        callback.onFailure(this.exception);
-                    }
-                }
             }
         };
 
@@ -131,17 +123,22 @@ public final class SmackXmppManager {
 
                 try {
 
-                    if (SmackXmppManager.this.xmppConnection == null ||
-                            SmackXmppManager.this.xmppConnection.isConnected() == false) {
+                    if (XmppManager.this.xmppConnection == null ||
+                            XmppManager.this.xmppConnection.isConnected() == false) {
                         throw new IllegalStateException("Either of initialization or connection hasn't been done yet.");
                     }
 
                     Log.d("XMPP", "Logging in XMPP Server...");
-                    SmackXmppManager.this.xmppConnection.login(username, password, resourceName);
+                    XmppManager.this.xmppConnection.login(username, password, resourceName);
                     Log.d("XMPP", "Logged in XMPP Server...");
 
-                    SmackXmppManager.this.chatManager =
-                            ChatManager.getInstanceFor(SmackXmppManager.this.xmppConnection);
+                    Log.d("XMPP", "Getting ChatManager...");
+                    XmppManager.this.chatManager =
+                            ChatManager.getInstanceFor(XmppManager.this.xmppConnection);
+
+                    Log.d("XMPP", "Getting FileTransferManager...");
+                    XmppManager.this.fileTransferManager =
+                            FileTransferManager.getInstanceFor(XmppManager.this.xmppConnection);
 
                 } catch (XMPPException | IOException | SmackException e) {
                     Log.e("XMPP", Log.getStackTraceString(e));
@@ -174,11 +171,13 @@ public final class SmackXmppManager {
         AsyncTask<Void, Integer, Boolean> asyncTask = new AsyncTask<Void, Integer, Boolean>() {
             @Override
             protected Boolean doInBackground(Void... voids) {
-                if (SmackXmppManager.this.xmppConnection != null) {
-                    if (SmackXmppManager.this.connectionListener != null)
-                        SmackXmppManager.this.xmppConnection
-                                .removeConnectionListener(SmackXmppManager.this.connectionListener);
-                    SmackXmppManager.this.xmppConnection.disconnect();
+                if (XmppManager.this.xmppConnection != null) {
+
+                    try {
+                        XmppManager.this.xmppConnection.disconnect(new Presence(Presence.Type.unavailable));
+                    } catch (SmackException.NotConnectedException e) {
+                        Log.e("XMPP", "XMPP not connected : " + Log.getStackTraceString(e));
+                    }
                     return true;
                 }
 
@@ -193,18 +192,23 @@ public final class SmackXmppManager {
         asyncTask.execute();
     }
 
-    public boolean isConnected(){
-        if(this.xmppConnection != null)
+    public boolean isConnected() {
+        if (this.xmppConnection != null)
             return this.xmppConnection.isConnected();
         return false;
     }
 
-    // Interface for callbacks
-    public interface SuccessOrFailureCallback {
+    public void sendMessage(String to, Message message) throws SmackException.NotConnectedException {
+        Chat chat = this.chatManager.createChat(to);
+        chat.sendMessage(message);
+    }
 
-        void onSuccess();
+    public ChatManager getChatManager() {
+        return this.chatManager;
+    }
 
-        void onFailure(Throwable e);
+    public FileTransferManager getFileTransferManager() {
+        return this.fileTransferManager;
     }
 
 }
