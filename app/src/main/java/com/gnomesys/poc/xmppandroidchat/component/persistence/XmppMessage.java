@@ -1,4 +1,4 @@
-package com.gnomesys.poc.xmppandroidchat.component.xmpp.persistence;
+package com.gnomesys.poc.xmppandroidchat.component.persistence;
 
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
@@ -19,5 +19,6 @@ public class XmppMessage extends RealmObject {
     private short type;
     private long senderLocalTime;
     private long recipientLocalTime;
+    private long insertedTime;
     private boolean seen;
 }

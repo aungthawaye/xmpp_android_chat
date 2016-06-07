@@ -1,4 +1,4 @@
-package com.gnomesys.poc.xmppandroidchat.component.xmpp;
+package com.gnomesys.poc.xmppandroidchat.component.chat;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,22 +10,22 @@ import android.content.Intent;
  * Email    : ata.aungthawaye@gmail.com (aungthawaye@gnomesys.com)
  * Date     : 5/6/16
  */
-public class XmppBroadcastReceiver extends BroadcastReceiver {
+public class ChatEventBroadcastReceiver extends BroadcastReceiver {
 
     private Context context;
-    private XmppEvent handler;
+    private ChatEventManager.XmppEvent handler;
 
-    public XmppBroadcastReceiver(Context context, XmppEvent handler) {
+    public ChatEventBroadcastReceiver(Context context, ChatEventManager.XmppEvent handler) {
         this.context = context;
         this.handler = handler;
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        String event = intent.getStringExtra(XmppEventManager.EXTRA_EVENT_NAME);
+        String event = intent.getStringExtra(ChatEventManager.EXTRA_EVENT_NAME);
 
         switch (event) {
-            case XmppEvent.CONNECTED:
+            case ChatEventManager.XmppEvent.CONNECTED:
                 this.handler.onConnected();
                 break;
         }

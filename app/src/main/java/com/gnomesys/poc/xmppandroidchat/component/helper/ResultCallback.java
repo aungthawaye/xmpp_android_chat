@@ -1,4 +1,4 @@
-package com.gnomesys.poc.xmppandroidchat.component.xmpp;
+package com.gnomesys.poc.xmppandroidchat.component.helper;
 
 /**
  * Created By
@@ -6,7 +6,7 @@ package com.gnomesys.poc.xmppandroidchat.component.xmpp;
  * Email    : ata.aungthawaye@gmail.com (aungthawaye@gnomesys.com)
  * Date     : 6/6/16
  */
-public interface SuccessOrFailureCallback {
+public interface ResultCallback {
     void onSuccess();
 
     void onFailure(Throwable e);

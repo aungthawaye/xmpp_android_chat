@@ -1,10 +1,8 @@
-package com.gnomesys.poc.xmppandroidchat.component.xmpp;
+package com.gnomesys.poc.xmppandroidchat.component.chat;
 
 import android.content.Context;
 import android.content.Intent;
 import android.support.v4.content.LocalBroadcastManager;
-
-import org.jivesoftware.smack.XMPPConnection;
 
 /**
  * Created By
@@ -12,14 +10,14 @@ import org.jivesoftware.smack.XMPPConnection;
  * Email    : ata.aungthawaye@gmail.com (aungthawaye@gnomesys.com)
  * Date     : 5/6/16
  */
-public class XmppEventManager {
+public class ChatEventManager {
 
-    public final static String ACTION_XMPP_EVENT = "XmppEventManager.XMPP_EVENT";
-    public final static String EXTRA_EVENT_NAME = "XmppEventManager.EVENT_NAME";
+    public final static String ACTION_XMPP_EVENT = "ChatEventManager.XMPP_EVENT";
+    public final static String EXTRA_EVENT_NAME = "ChatEventManager.EVENT_NAME";
 
     private Context context = null;
 
-    public XmppEventManager(Context context) {
+    public ChatEventManager(Context context) {
         this.context = context;
     }
 
@@ -35,5 +33,24 @@ public class XmppEventManager {
         intent.putExtra(EXTRA_EVENT_NAME, XmppEvent.AUTHENTICATED);
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(this.context);
         lbm.sendBroadcast(intent);
+    }
+
+
+    public interface XmppEvent {
+
+        String CONNECTED = "connected";
+        String AUTHENTICATED = "authenticated";
+
+        void onLogin();
+
+        void onConnected();
+
+        void onDisconnect();
+
+        void onIncomingMessage();
+
+        void onReceiptMessageReceived();
+
+        void onChatCreated();
     }
 }

@@ -12,7 +12,7 @@ import org.jivesoftware.smack.packet.Message;
 public class XmppAwareActivity extends AppCompatActivity implements ChatMessageListener {
 
     /**
-     * It will be called whenever ChatManager receive the chat message.
+     * It will be called whenever MessagingManager receive the chat message.
      *
      */
     @Override

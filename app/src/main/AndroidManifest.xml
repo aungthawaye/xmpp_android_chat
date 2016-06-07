@@ -21,7 +21,7 @@
         </activity>
 
         <service
-            android:name=".component.xmpp.XmppService"
+            android:name=".service.ChatService"
             android:enabled="true"
             android:exported="false"
             android:stopWithTask="false">
