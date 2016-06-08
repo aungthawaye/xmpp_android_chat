@@ -1,9 +1,7 @@
-package com.gnomesys.poc.xmppandroidchat.component.chat;
+package com.gnomesys.poc.xmppandroidchat.component;
 
 import android.os.AsyncTask;
 import android.util.Log;
-
-import com.gnomesys.poc.xmppandroidchat.component.helper.ResultCallback;
 
 import org.jivesoftware.smack.AbstractXMPPConnection;
 import org.jivesoftware.smack.ConnectionConfiguration;
@@ -12,6 +10,7 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.chat.Chat;
+import org.jivesoftware.smack.chat.ChatManager;
 import org.jivesoftware.smack.chat.ChatManagerListener;
 import org.jivesoftware.smack.chat.ChatMessageListener;
 import org.jivesoftware.smack.packet.ExtensionElement;
@@ -24,8 +23,11 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.ChatStateListener;
 import org.jivesoftware.smackx.chatstates.ChatStateManager;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.filetransfer.FileTransferListener;
 import org.jivesoftware.smackx.filetransfer.FileTransferManager;
+import org.jivesoftware.smackx.filetransfer.FileTransferRequest;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
+import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.jivesoftware.smackx.receipts.ReceiptReceivedListener;
 
 import java.io.IOException;
@@ -39,15 +41,15 @@ import java.util.Map;
  * Email    : ata.aungthawaye@gmail.com (aungthawaye@gnomesys.com)
  * Date     : 5/6/16
  */
-public final class MessagingManager
+public final class SmackXMPPManager
         implements ChatManagerListener, ChatMessageListener, ChatStateListener, ConnectionListener,
-        ReceiptReceivedListener {
+        ReceiptReceivedListener, FileTransferListener {
 
-    private final static MessagingManager INSTANCE = new MessagingManager();
+    private final static SmackXMPPManager INSTANCE = new SmackXMPPManager();
 
-    private AbstractXMPPConnection xmppConnection = null;
-
-    private org.jivesoftware.smack.chat.ChatManager chatManager;
+    private AbstractXMPPConnection xmppConnection;
+    private ChatEventListener delegate;
+    private ChatManager chatManager;
     private ChatStateManager chatStateManager;
     private DeliveryReceiptManager deliveryReceiptManager;
     private FileTransferManager fileTransferManager;
@@ -55,12 +57,21 @@ public final class MessagingManager
     // To keep the list of Chat instances.
     private Map<String, Chat> chatBoxes = new HashMap<>();
 
-    private MessagingManager() {
+    private SmackXMPPManager() {
 
     }
 
-    public final static MessagingManager getInstance() {
+    public final static SmackXMPPManager getInstance() {
         return INSTANCE;
+    }
+
+    /**
+     * The delegator which will actually handle these Smack's XMPP related events.
+     *
+     * @param delegate
+     */
+    public void setListenerDelegate(ChatEventListener delegate) {
+        this.delegate = delegate;
     }
 
     /**
@@ -108,11 +119,11 @@ public final class MessagingManager
 
                 try {
 
-                    MessagingManager.this.xmppConnection
-                            .addConnectionListener(MessagingManager.this);
+                    SmackXMPPManager.this.xmppConnection
+                            .addConnectionListener(SmackXMPPManager.this);
 
                     Log.d("XMPP", "Connecting to XMPP Server...");
-                    MessagingManager.this.xmppConnection.connect();
+                    SmackXMPPManager.this.xmppConnection.connect();
                     Log.d("XMPP", "Connected to XMPP Server...");
 
                 } catch (XMPPException | IOException | SmackException e) {
@@ -157,33 +168,37 @@ public final class MessagingManager
 
                 try {
 
-                    if (MessagingManager.this.xmppConnection == null ||
-                            MessagingManager.this.xmppConnection.isConnected() == false) {
+                    if (SmackXMPPManager.this.xmppConnection == null ||
+                            SmackXMPPManager.this.xmppConnection.isConnected() == false) {
                         throw new IllegalStateException("Either of initialization or connection hasn't been done yet.");
                     }
 
                     Log.d("XMPP", "Logging in XMPP Server...");
-                    MessagingManager.this.xmppConnection.login(username, password, resourceName);
+                    SmackXMPPManager.this.xmppConnection.login(username, password, resourceName);
                     Log.d("XMPP", "Logged in XMPP Server...");
 
-                    Log.d("XMPP", "Getting MessagingManager...");
-                    MessagingManager.this.chatManager =
-                            org.jivesoftware.smack.chat.ChatManager.getInstanceFor(MessagingManager.this.xmppConnection);
+                    Log.d("XMPP", "Getting SmackXMPPManager...");
+                    SmackXMPPManager.this.chatManager =
+                            org.jivesoftware.smack.chat.ChatManager
+                                    .getInstanceFor(SmackXMPPManager.this.xmppConnection);
+                    SmackXMPPManager.this.chatManager.addChatListener(SmackXMPPManager.this);
 
                     Log.d("XMPP", "Getting FileTransferManager...");
-                    MessagingManager.this.fileTransferManager =
-                            FileTransferManager.getInstanceFor(MessagingManager.this.xmppConnection);
+                    SmackXMPPManager.this.fileTransferManager =
+                            FileTransferManager.getInstanceFor(SmackXMPPManager.this.xmppConnection);
+                    SmackXMPPManager.this.fileTransferManager.addFileTransferListener(SmackXMPPManager.this);
 
                     Log.d("XMPP", "Getting ChatStateManager...");
-                    MessagingManager.this.chatStateManager = ChatStateManager.getInstance(MessagingManager.this.xmppConnection);
+                    SmackXMPPManager.this.chatStateManager =
+                            ChatStateManager.getInstance(SmackXMPPManager.this.xmppConnection);
 
                     Log.d("XMPP", "Getting DeliveryReceiptManager...");
-                    MessagingManager.this.deliveryReceiptManager =
-                            DeliveryReceiptManager.getInstanceFor(MessagingManager.this.xmppConnection);
+                    SmackXMPPManager.this.deliveryReceiptManager =
+                            DeliveryReceiptManager.getInstanceFor(SmackXMPPManager.this.xmppConnection);
                     // We enable auto delivery receipt requests. So, we will know whether the recipient
                     // get our message or not.
-                    MessagingManager.this.deliveryReceiptManager.autoAddDeliveryReceiptRequests();
-                    MessagingManager.this.deliveryReceiptManager.addReceiptReceivedListener(MessagingManager.this);
+                    SmackXMPPManager.this.deliveryReceiptManager.autoAddDeliveryReceiptRequests();
+                    SmackXMPPManager.this.deliveryReceiptManager.addReceiptReceivedListener(SmackXMPPManager.this);
 
                 } catch (XMPPException | IOException | SmackException e) {
                     Log.e("XMPP", Log.getStackTraceString(e));
@@ -218,7 +233,7 @@ public final class MessagingManager
             protected Boolean doInBackground(Void... voids) {
                 try {
                     Log.d("XMPP", "Disconnecting XMPP...");
-                    MessagingManager.this.xmppConnection.disconnect(new Presence(Presence.Type.unavailable));
+                    SmackXMPPManager.this.xmppConnection.disconnect(new Presence(Presence.Type.unavailable));
                     Log.d("XMPP", "Disconnected XMPP...");
                 } catch (SmackException.NotConnectedException e) {
                     Log.e("XMPP", "XMPP not connected : " + Log.getStackTraceString(e));
@@ -242,11 +257,13 @@ public final class MessagingManager
      *
      * @param to      : the recipient's JabberID (e.g yourname@yourservicename.com)
      * @param message : the chat message
+     * @return : Delivery receipt Id
      */
-    public void sendMessage(String to, Message message)
+    public String sendMessage(String to, Message message)
             throws SmackException.NotConnectedException, ServiceUnavailableException {
 
-        if (this.xmppConnection == null || !this.xmppConnection.isConnected() || this.chatManager == null)
+        if (this.xmppConnection == null || !this.xmppConnection
+                .isConnected() || this.chatManager == null || !this.xmppConnection.isAuthenticated())
             throw new ServiceUnavailableException();
 
         // Check whether the recipient's chat instance is already exist in chatBoxes map.
@@ -254,10 +271,18 @@ public final class MessagingManager
             Log.d("XMPP", "New chat for this recipient : [" + to + "].");
             // We create chat and listen messaging on this chat.
             this.chatBoxes.put(to, this.chatManager.createChat(to, this));
+        } else {
+            Log.d("XMPP", "Existing chat for this recipient : [" + to + "].");
         }
+
+
         Chat chat = this.chatBoxes.get(to);
-        Log.d("XMPP", "Existing chat for this recipient : [" + to + "].");
+        String deliverReceiptId = DeliveryReceiptRequest.addTo(message);
         chat.sendMessage(message);
+        Log.d("XMPP",
+                "sendMessage : from : [" + message.getFrom() + "] to : [" + message.getTo() + "] stanzaId : [" + message
+                        .getStanzaId() + "] body : [" + message.getBody() + "].");
+        return deliverReceiptId;
     }
 
     /**
@@ -283,6 +308,8 @@ public final class MessagingManager
 
     @Override
     public void chatCreated(Chat chat, boolean createdLocally) {
+
+        Log.d("XMPP", "chatCreated : participant : [" + chat.getParticipant() + "].");
         if (!createdLocally) {
             // It's incoming chat. Then we need to listen its messaging.
             chat.addMessageListener(this);
@@ -291,17 +318,24 @@ public final class MessagingManager
 
     @Override
     public void stateChanged(Chat chat, ChatState state) {
-
+        this.delegate.onStateChanged(state);
     }
 
     @Override
     public void processMessage(Chat chat, Message message) {
+
+        Log.d("XMPP",
+                "processMessage : from : [" + message.getFrom() + "] to : [" + message.getTo() + "] body : [" + message
+                        .getBody() + "]. stanzaId : [" + message.getStanzaId() + "]. XML [" + message.toXML()
+                        .toString() + "].");
         // Check whether the message got extension
         if (message.getBody() == null || message.getBody().isEmpty()) {
             // If there is no message body, then it could be message for chat states.
             for (ExtensionElement ee : message.getExtensions()) {
                 if (ee instanceof ChatStateExtension) {
                     // Do something.
+                    ChatStateExtension state = (ChatStateExtension) ee;
+                    this.delegate.onStateChanged(state.getChatState());
                 }
             }
         } else {
@@ -311,44 +345,48 @@ public final class MessagingManager
 
     @Override
     public void connected(XMPPConnection connection) {
-
+        this.delegate.onConnected(connection.isConnected());
     }
 
     @Override
     public void authenticated(XMPPConnection connection, boolean resumed) {
-
+        // Do nothing...
     }
 
     @Override
     public void connectionClosed() {
-
+        this.delegate.onConnectionClosed();
     }
 
     @Override
     public void connectionClosedOnError(Exception e) {
-
+        this.delegate.onConnectionClosedOnError(e);
     }
 
     @Override
     public void reconnectionSuccessful() {
-
+        this.delegate.onReconnectionSuccessful();
     }
 
     @Override
     public void reconnectingIn(int seconds) {
-
+        this.delegate.onReconnectingIn(seconds);
     }
 
     @Override
     public void reconnectionFailed(Exception e) {
-
+        this.delegate.onReconnectionFailed(e);
     }
 
     @Override
     public void onReceiptReceived(String fromJid, String toJid, String receiptId, Stanza receipt) {
-
+        this.delegate.onReceiptReceived(fromJid, toJid, receiptId, receipt);
     }
 
+    @Override
+    public void fileTransferRequest(FileTransferRequest request) {
+
+    }
 
     public class ServiceUnavailableException extends Exception {
         public ServiceUnavailableException() {

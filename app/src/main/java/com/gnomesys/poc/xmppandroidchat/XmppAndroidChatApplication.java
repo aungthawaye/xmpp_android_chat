@@ -3,7 +3,10 @@ package com.gnomesys.poc.xmppandroidchat;
 import android.app.Application;
 import android.content.Intent;
 
-import com.gnomesys.poc.xmppandroidchat.service.ChatService;
+import com.gnomesys.poc.xmppandroidchat.service.XMPPService;
+
+import io.realm.Realm;
+import io.realm.RealmConfiguration;
 
 /**
  * Created by fendra on 5/6/16.
@@ -14,10 +17,13 @@ public class XmppAndroidChatApplication extends Application {
         super.onCreate();
 
         // Start XMPP service
-        Intent xmppIntent = new Intent(this.getApplicationContext(), ChatService.class);
-        xmppIntent.putExtra(ChatService.EXTRA_HOST, "192.168.0.101");
-        xmppIntent.putExtra(ChatService.EXTRA_PORT, 5222);
-        xmppIntent.putExtra(ChatService.EXTRA_SERVICE_NAME, "im.gnomesys.com");
+        Intent xmppIntent = new Intent(this.getApplicationContext(), XMPPService.class);
+        xmppIntent.putExtra(XMPPService.EXTRA_HOST, "192.168.0.101");
+        xmppIntent.putExtra(XMPPService.EXTRA_PORT, 5222);
+        xmppIntent.putExtra(XMPPService.EXTRA_SERVICE_NAME, "im.gnomesys.com");
         this.startService(xmppIntent);
+
+        RealmConfiguration realmConfig = new RealmConfiguration.Builder(this.getApplicationContext()).build();
+        Realm.setDefaultConfiguration(realmConfig);
     }
 }

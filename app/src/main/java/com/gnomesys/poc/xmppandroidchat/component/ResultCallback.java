@@ -1,4 +1,4 @@
-package com.gnomesys.poc.xmppandroidchat.component.helper;
+package com.gnomesys.poc.xmppandroidchat.component;
 
 /**
  * Created By

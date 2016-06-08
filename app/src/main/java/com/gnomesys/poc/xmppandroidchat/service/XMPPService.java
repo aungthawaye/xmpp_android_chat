@@ -6,21 +6,22 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
-import com.gnomesys.poc.xmppandroidchat.component.chat.MessagingManager;
-import com.gnomesys.poc.xmppandroidchat.component.helper.ResultCallback;
-import com.gnomesys.poc.xmppandroidchat.component.chat.ChatEventManager;
+import com.gnomesys.poc.xmppandroidchat.component.ChatEventListener;
+import com.gnomesys.poc.xmppandroidchat.component.ChatEventProcessor;
+import com.gnomesys.poc.xmppandroidchat.component.SmackXMPPManager;
+import com.gnomesys.poc.xmppandroidchat.component.ResultCallback;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 
-public class ChatService extends Service  {
+public class XMPPService extends Service {
 
-    public final static String EXTRA_HOST = "ChatService.HOST";
-    public final static String EXTRA_PORT = "ChatService.PORT";
-    public final static String EXTRA_SERVICE_NAME = "ChatService.SERVICE_NAME";
+    public final static String EXTRA_HOST = "XMPPService.HOST";
+    public final static String EXTRA_PORT = "XMPPService.PORT";
+    public final static String EXTRA_SERVICE_NAME = "XMPPService.SERVICE_NAME";
 
-    private ChatEventManager chatEventManager;
-    private MessagingManager messagingManager;
+    private SmackXMPPManager smackXMPPManager;
+    private ChatEventListener chatEventProcessor;
 
     private final XmppServiceBinder xmppServiceBinder = new XmppServiceBinder();
 
@@ -28,10 +29,10 @@ public class ChatService extends Service  {
     public void onCreate() {
         super.onCreate();
 
-        Log.d("XMPP", "Creating ChatService...");
-        this.messagingManager = MessagingManager.getInstance();
-        this.chatEventManager = new ChatEventManager(this.getApplicationContext());
-        Log.d("XMPP", "Created ChatService. It's ready for initialization.");
+        Log.d("XMPP", "Creating XMPPService...");
+        this.smackXMPPManager = SmackXMPPManager.getInstance();
+        this.smackXMPPManager.setListenerDelegate(new ChatEventProcessor(this.getApplicationContext()));
+        Log.d("XMPP", "Created XMPPService. It's ready for initialization.");
     }
 
     @Override
@@ -42,7 +43,7 @@ public class ChatService extends Service  {
         final int port = intent.getIntExtra(EXTRA_PORT, 5222);
         final String serviceName = intent.getStringExtra(EXTRA_SERVICE_NAME);
 
-        this.messagingManager.initialize(host, port, serviceName);
+        this.smackXMPPManager.initialize(host, port, serviceName);
         // Try to connect to XMPP server after initialization.
         this.connect();
 
@@ -63,36 +64,36 @@ public class ChatService extends Service  {
     }
 
     public void connect() {
-        this.messagingManager.connect();
+        this.smackXMPPManager.connect();
     }
 
     public void login(final String username,
                       final String password,
                       final String resourceName,
-                      final ResultCallback callback) throws MessagingManager.ServiceUnavailableException {
+                      final ResultCallback callback) throws SmackXMPPManager.ServiceUnavailableException {
 
-        this.messagingManager.login(username, password, resourceName, callback);
+        this.smackXMPPManager.login(username, password, resourceName, callback);
     }
 
     public void disconnect() {
-        this.messagingManager.disconnect();
+        this.smackXMPPManager.disconnect();
     }
 
     public boolean isConnected() {
-        return this.messagingManager.isConnected();
+        return this.smackXMPPManager.isConnected();
     }
 
-    public void sendMessage(String to, Message message)
-            throws SmackException.NotConnectedException, MessagingManager.ServiceUnavailableException {
-        this.messagingManager.sendMessage(to, message);
+    public String sendMessage(String to, Message message)
+            throws SmackException.NotConnectedException, SmackXMPPManager.ServiceUnavailableException {
+        return this.smackXMPPManager.sendMessage(to, message);
     }
 
     /**
      * Helper for Binder
      */
     public class XmppServiceBinder extends Binder {
-        public ChatService getService() {
-            return ChatService.this;
+        public XMPPService getService() {
+            return XMPPService.this;
         }
     }
 
