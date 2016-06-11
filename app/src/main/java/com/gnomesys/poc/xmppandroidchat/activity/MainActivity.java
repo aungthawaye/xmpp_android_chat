@@ -45,39 +45,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final EditText txtUsername = (EditText) this.findViewById(R.id.txtUsername);
-        assert txtUsername != null;
 
-        final EditText txtPassword = (EditText) this.findViewById(R.id.txtPassword);
-        assert txtPassword != null;
-
-        Button btnLogin = (Button) this.findViewById(R.id.btnLogin);
-        assert btnLogin != null;
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (MainActivity.this.xmppService != null) {
-                    try {
-                        MainActivity.this.xmppService
-                                .login(txtUsername.getText().toString(), txtPassword.getText().toString(),
-                                        txtUsername.getText().toString(),
-                                        new ResultCallback() {
-                                            @Override
-                                            public void onSuccess() {
-                                                Log.d("XAC", "Login successful...");
-                                            }
-
-                                            @Override
-                                            public void onFailure(Throwable e) {
-                                                Log.d("XAC", "Login failed : " + Log.getStackTraceString(e));
-                                            }
-                                        });
-                    } catch (SmackXMPPManager.ServiceUnavailableException e) {
-                        Toast.makeText(MainActivity.this, "Xmpp not available...", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
-        });
 
         final EditText txtTo = (EditText) this.findViewById(R.id.txtTo);
         assert txtTo != null;
